@@ -191,7 +191,11 @@
             document.getElementById('time').textContent = (remain / 1000).toFixed(1) + 's';
             const progress = document.getElementById('progress');
             const total = phases[phaseIdx].dur;
-            progress.style.width = ((total - remain) / total * 100) + '%';
+            if (phaseIdx === 0) {
+                progress.style.width = ((total - remain) / total * 100) + '%';
+            } else {
+                progress.style.width = ((remain) / total * 100) + '%';
+            }
             progress.style.background = phases[phaseIdx].bar;
         }
 
