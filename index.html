@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Interval Timer</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            transition: background 0.3s;
+            font-family: 'Inter', sans-serif;
+        }
+        #main {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+        }
+        .button-85 {
+            font-size: 2rem;
+            padding: 1em 3em;
+            border: none;
+            outline: none;
+            color: rgb(255, 255, 255);
+            background: #111;
+            cursor: pointer;
+            position: relative;
+            z-index: 0;
+            border-radius: 10px;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: manipulation;
+            transition: transform 0.08s cubic-bezier(.4,0,.2,1);
+            font-family: 'Inter', sans-serif;
+        }
+        .button-85:before {
+            content: "";
+            background: linear-gradient(
+                45deg,
+                #ff0000,
+                #ff7300,
+                #fffb00,
+                #48ff00,
+                #00ffd5,
+                #002bff,
+                #7a00ff,
+                #ff00c8,
+                #ff0000
+            );
+            position: absolute;
+            top: -2px;
+            left: -2px;
+            background-size: 400%;
+            z-index: -1;
+            filter: blur(5px);
+            -webkit-filter: blur(5px);
+            width: calc(100% + 4px);
+            height: calc(100% + 4px);
+            animation: glowing-button-85 20s linear infinite;
+            transition: opacity 0.3s ease-in-out;
+            border-radius: 10px;
+        }
+        @keyframes glowing-button-85 {
+            0% { background-position: 0 0; }
+            50% { background-position: 400% 0; }
+            100% { background-position: 0 0; }
+        }
+        .button-85:after {
+            z-index: -1;
+            content: "";
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            background: #222;
+            left: 0;
+            top: 0;
+            border-radius: 10px;
+        }
+        .button-85:active {
+            transform: scale(0.95);
+        }
+        .pause-btn {
+            font-size: 1rem;
+            padding: 0.5em 1.5em;
+            border: none;
+            border-radius: 6px;
+            background: #6c757d;
+            color: #fff;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            transition: background 0.15s, transform 0.08s cubic-bezier(.4,0,.2,1);
+            margin-bottom: 3rem;
+        }
+        .pause-btn:hover {
+            background: #5a6268;
+        }
+        .pause-btn:active {
+            transform: scale(0.95);
+        }
+        .pause-btn:disabled {
+            background: #adb5bd;
+            cursor: not-allowed;
+            transform: none;
+        }
+        #cycleInfo {
+            font-size: 1.3rem;
+            font-weight: 500;
+            font-family: 'Inter', sans-serif;
+        }
+        #time {
+            font-size: 2.5rem;
+            font-family: 'Inter', monospace, sans-serif;
+            margin-bottom: 0.5rem;
+        }
+        #progressBar {
+            width: 320px;
+            height: 18px;
+            background: #e9ecef;
+            border-radius: 9px;
+            overflow: hidden;
+            margin-bottom: 0.5rem;
+        }
+        #progress {
+            height: 100%;
+            background: #51cf66;
+            transition: width 0.1s linear, background 0.3s;
+        }
+    </style>
+</head>
+<body>
+    <div id="main">
+        <button class="button-85" role="button" id="resetBtn" onclick="resetAndStart()">Start</button>
+        <button class="pause-btn" id="pauseBtn" onclick="pauseTimer()" disabled>Pause</button>
+        <div id="cycleInfo"></div>
+        <div id="time"></div>
+        <div id="progressBar"><div id="progress"></div></div>
+    </div>
+    <script>
+        let currentTimer = null;
+        let currentInterval = null;
+        const totalCycles = 10;
+        const phases = [
+            { dur: 3000, color: '#b2f2bb', bar: '#51cf66', label: 'Green' },
+            { dur: 2000, color: '#ffa8a8', bar: '#ff6b6b', label: 'Red' }
+        ];
+        let cycle = 0;
+        let phaseIdx = 0;
+        let phaseEnd = 0;
+        let timerState = {
+            running: false,
+            paused: false,
+            remaining: 0
+        };
+
+        function clearTimers() {
+            if (currentTimer) clearTimeout(currentTimer);
+            if (currentInterval) clearInterval(currentInterval);
+        }
+
+        function updateUI(remain) {
+            document.body.style.background = phases[phaseIdx].color;
+            document.getElementById('cycleInfo').textContent = `Set ${cycle + 1} / ${totalCycles}`;
+            document.getElementById('time').textContent = (remain / 1000).toFixed(1) + 's';
+            const progress = document.getElementById('progress');
+            const total = phases[phaseIdx].dur;
+            progress.style.width = ((total - remain) / total * 100) + '%';
+            progress.style.background = phases[phaseIdx].bar;
+        }
+
+        function runPhase() {
+            if (cycle >= totalCycles) {
+                document.body.style.background = '#f8f9fa';
+                document.getElementById('cycleInfo').textContent = 'Done!';
+                document.getElementById('time').textContent = '';
+                document.getElementById('progress').style.width = '0%';
+                document.getElementById('resetBtn').textContent = 'Reset';
+                document.getElementById('pauseBtn').disabled = true;
+                timerState.running = false;
+                return;
+            }
+            const duration = phases[phaseIdx].dur;
+            phaseEnd = Date.now() + duration;
+            updateUI(duration);
+            
+            currentInterval = setInterval(() => {
+                const remain = Math.max(0, phaseEnd - Date.now());
+                updateUI(remain);
+            }, 50);
+            
+            currentTimer = setTimeout(() => {
+                clearInterval(currentInterval);
+                if (phaseIdx === 1) cycle++;
+                phaseIdx = (phaseIdx + 1) % 2;
+                runPhase();
+            }, duration);
+        }
+
+        function resumePhase(remainingTime) {
+            phaseEnd = Date.now() + remainingTime;
+            updateUI(remainingTime);
+            
+            currentInterval = setInterval(() => {
+                const remain = Math.max(0, phaseEnd - Date.now());
+                updateUI(remain);
+            }, 50);
+            
+            currentTimer = setTimeout(() => {
+                clearInterval(currentInterval);
+                if (phaseIdx === 1) cycle++;
+                phaseIdx = (phaseIdx + 1) % 2;
+                runPhase();
+            }, remainingTime);
+        }
+
+        function resetAndStart() {
+            clearTimers();
+            cycle = 0;
+            phaseIdx = 0;
+            timerState = { running: true, paused: false, remaining: 0 };
+            document.getElementById('resetBtn').textContent = 'Reset';
+            document.getElementById('pauseBtn').textContent = 'Pause';
+            document.getElementById('pauseBtn').disabled = false;
+            runPhase();
+        }
+
+        function pauseTimer() {
+            if (!timerState.running) return;
+            
+            if (!timerState.paused) {
+                timerState.paused = true;
+                clearTimers();
+                timerState.remaining = Math.max(0, phaseEnd - Date.now());
+                document.getElementById('pauseBtn').textContent = 'Resume';
+            } else {
+                timerState.paused = false;
+                document.getElementById('pauseBtn').textContent = 'Pause';
+                resumePhase(timerState.remaining);
+            }
+        }
+    </script>
+</body>
+</html> 
